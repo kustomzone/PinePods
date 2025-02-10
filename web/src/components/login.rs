@@ -5,6 +5,7 @@ use crate::components::gen_funcs::{encode_password, validate_user_input, Validat
 use crate::components::setting_components::theme_options::initialize_default_theme;
 use crate::requests::login_requests::{self, call_check_mfa_enabled, call_create_first_admin};
 use crate::requests::login_requests::{call_add_login_user, AddUserRequest};
+use crate::i18n::I18N;
 use crate::requests::login_requests::{
     call_first_login_done, call_get_time_info, call_reset_password_create_code,
     call_self_service_login_status, call_setup_timezone_info, call_verify_and_reset_password,
@@ -20,6 +21,7 @@ use web_sys::{console, window};
 use yew::prelude::*;
 use yew_router::history::{BrowserHistory, History};
 use yewdux::prelude::*;
+use web_sys::HtmlSelectElement;
 
 // Gravatar URL generation functions (outside of use_effect_with)
 fn calculate_gravatar_hash(email: &String) -> String {
@@ -137,6 +139,15 @@ pub fn login() -> Html {
                         }
                         if let Ok(Some(user_state)) = storage.get_item("userState") {
                             let app_state_result = AppState::deserialize(&user_state);
+                            if let Ok(app_state) = &app_state_result {  // Just reference the result instead of cloning
+                                if let Some(user_details) = &app_state.user_details {
+                                    if let Some(preferred_language) = &user_details.PreferredLanguage {
+                                        I18N.with(|i18n| {
+                                            let _ = i18n.set_language(preferred_language);
+                                        });
+                                    }
+                                }
+                            }
 
                             if let Ok(Some(auth_state)) = storage.get_item("userAuthState") {
                                 match AppState::deserialize(&auth_state) {
@@ -1018,6 +1029,15 @@ pub fn login() -> Html {
         })
     };
 
+    let language = use_state(|| "en".to_string());
+    let on_language_change = {
+        let language = language.clone();
+        Callback::from(move |e: Event| {
+            let input: HtmlSelectElement = e.target_unchecked_into();
+            language.set(input.value());
+        })
+    };
+
     let on_time_zone_submit = {
         // let (state, dispatch) = use_store::<AppState>();
         let page_state = page_state.clone();
@@ -1047,10 +1067,11 @@ pub fn login() -> Html {
             // page_state.set(PageState::Default);
 
             let timezone_info = TimeZoneInfo {
-                user_id: *temp_user_id, // assuming temp_user_id is a use_state of i32
+                user_id: *temp_user_id,
                 timezone: (*time_zone).clone(),
                 hour_pref: *time_pref,
                 date_format: (*date_format).clone(),
+                preferred_language: (*language).clone(),
             };
 
             wasm_bindgen_futures::spawn_local(async move {
@@ -1181,6 +1202,24 @@ pub fn login() -> Html {
                                 <option value="USA">{"MM/DD/YYYY"}</option>
                                 <option value="EUR">{"DD.MM.YYYY"}</option>
                                 <option value="JIS">{"YYYY-MM-DD"}</option>
+                            </select>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label class="modal-label">
+                                <i class="ph ph-translate"></i>
+                                <span>{"Preferred Language"}</span>
+                            </label>
+                            <select
+                                id="language"
+                                name="language"
+                                class="modal-select"
+                                onchange={on_language_change}
+                            >
+                                <option value="en">{"English"}</option>
+                                <option value="es">{"Español"}</option>
+                                <option value="fr">{"Français"}</option>
+                                <option value="de">{"Deutsch"}</option>
                             </select>
                         </div>
 
@@ -1844,6 +1883,17 @@ pub fn login() -> Html {
             }
         })
     };
+
+    let language = use_state(|| "en".to_string());
+    let on_language_change = {
+        let language = language.clone();
+        Callback::from(move |e: Event| {
+            let input: HtmlSelectElement = e.target_unchecked_into();
+            language.set(input.value());
+        })
+    };
+
+
     let dispatch_time = _dispatch.clone();
     let on_time_zone_submit = {
         // let (state, dispatch) = use_store::<AppState>();
@@ -1876,6 +1926,7 @@ pub fn login() -> Html {
                 timezone: (*time_zone).clone(),
                 hour_pref: *time_pref,
                 date_format: (*date_format).clone(),
+                preferred_language: (*language).clone(),
             };
 
             wasm_bindgen_futures::spawn_local(async move {
@@ -2003,6 +2054,24 @@ pub fn login() -> Html {
                                 <option value="USA">{"MM/DD/YYYY"}</option>
                                 <option value="EUR">{"DD.MM.YYYY"}</option>
                                 <option value="JIS">{"YYYY-MM-DD"}</option>
+                            </select>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label class="modal-label">
+                                <i class="ph ph-translate"></i>
+                                <span>{"Preferred Language"}</span>
+                            </label>
+                            <select
+                                id="language"
+                                name="language"
+                                class="modal-select"
+                                onchange={on_language_change}
+                            >
+                                <option value="en">{"English"}</option>
+                                <option value="es">{"Español"}</option>
+                                <option value="fr">{"Français"}</option>
+                                <option value="de">{"Deutsch"}</option>
                             </select>
                         </div>
 

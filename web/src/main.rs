@@ -1,6 +1,7 @@
 // Custom Mods
 mod components;
 mod requests;
+mod i18n;
 
 #[cfg(test)]
 mod tests;

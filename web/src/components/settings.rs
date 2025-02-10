@@ -11,6 +11,8 @@ use wasm_bindgen::JsCast;
 use web_sys::window;
 use yew::prelude::*;
 use yewdux::prelude::*;
+use crate::i18n::{use_translator, use_language};
+
 // use crate::components::gen_funcs::check_auth;
 
 #[derive(Properties, PartialEq, Clone)]
@@ -106,6 +108,9 @@ pub fn accordion_item(
 
 #[function_component(Settings)]
 pub fn settings() -> Html {
+    let t = use_translator();
+    let (current_lang, set_language) = use_language();
+    
     let (state, dispatch) = use_store::<AppState>();
     let effect_dispatch = dispatch.clone();
 
@@ -167,8 +172,11 @@ pub fn settings() -> Html {
     let is_admin = use_state(|| false);
     let audio_admin = audio_dispatch.clone();
 
+    let admin_check_error = t("admin-check-error");
+
     {
         let is_admin = is_admin.clone();
+        let error_msg = admin_check_error.clone();
 
         use_effect_with(
             (api_key.clone(), user_id.clone(), server_name.clone()),
@@ -184,10 +192,9 @@ pub fn settings() -> Html {
                             }
                             Err(e) => {
                                 audio_admin.reduce_mut(|state| {
-                                    state.error_message =
-                                        Some(format!("Failed to check admin status: {:?}", e))
+                                    state.error_message = 
+                                        Some(format!("{}: {:?}", error_msg, e))
                                 });
-                                // console::log_1(&format!("Failed to check admin status: {:?}", e).into());
                             }
                         }
                     });
@@ -238,12 +245,12 @@ pub fn settings() -> Html {
             <Search_nav />
             <UseScrollToTop />
             <div class="my-4">
-                <h1 class="item_container-text text-2xl font-bold mb-3">{ "Settings" }</h1>
+                <h1 class="item_container-text text-2xl font-bold mb-3">{ t("settings") }</h1>
                 <div class="inline-flex tab-background p-1 rounded-lg bg-opacity-10 mb-6">
                     <Tab
                         is_active={*active_tab == "user"}
                         class="text-base"
-                        label={"User Settings".to_string()}
+                        label={t("user-settings")}
                         onclick={on_user_tab_click.clone()}
                     />
                     {
@@ -252,7 +259,7 @@ pub fn settings() -> Html {
                                 <Tab
                                     is_active={*active_tab == "admin"}
                                     class="text-base"
-                                    label={"Admin Settings".to_string()}
+                                    label={t("admin-settings")}
                                     onclick={on_admin_tab_click.clone()}
                                 />
                             }
@@ -266,27 +273,27 @@ pub fn settings() -> Html {
                     if *active_tab == "user" {
                         html! {
                         <div id="accordion-collapse" data-accordion="collapse" class="bg-custom-light">
-                            <AccordionItem title="Change Theme" content={html!{ <setting_components::theme_options::ThemeOptions /> }} position={AccordionItemPosition::First}/>
-                            <AccordionItem title="Account Settings" content={html!{ <setting_components::user_self_settings::UserSelfSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="MFA Settings" content={html!{ <setting_components::mfa_settings::MFAOptions /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Export/Backup Podcasts" content={html!{ <setting_components::export_settings::ExportOptions /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Import Podcasts" content={html!{ <setting_components::import_options::ImportOptions /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Add Custom Feed" content={html!{ <setting_components::custom_feed::CustomFeed /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Connect Nextcloud/Gpodder Podcast Sync" content={html!{ <setting_components::nextcloud_options::NextcloudOptions /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Enable/Disable RSS Feeds" content={html!{ <setting_components::rss_feeds::RSSFeedSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Api Keys" content={html!{ <setting_components::api_keys::APIKeys /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("theme") } content={html!{ <setting_components::theme_options::ThemeOptions /> }} position={AccordionItemPosition::First}/>
+                            <AccordionItem title={ t("account-settings") } content={html!{ <setting_components::user_self_settings::UserSelfSettings /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("mfa-settings") } content={html!{ <setting_components::mfa_settings::MFAOptions /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("export-backup") } content={html!{ <setting_components::export_settings::ExportOptions /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("import-podcasts") } content={html!{ <setting_components::import_options::ImportOptions /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("custom-feed") } content={html!{ <setting_components::custom_feed::CustomFeed /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("connect-sync") } content={html!{ <setting_components::nextcloud_options::NextcloudOptions /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("rss-settings") } content={html!{ <setting_components::rss_feeds::RSSFeedSettings /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("api-keys") } content={html!{ <setting_components::api_keys::APIKeys /> }} position={AccordionItemPosition::Middle}/>
                         </div>
                         }
                     } else if *active_tab == "admin" {
                         html! {
                         <div id="accordion-collapse" data-accordion="collapse" class="bg-custom-light">
-                            <AccordionItem title="User Management" content={html!{ <setting_components::user_settings::UserSettings /> }} position={AccordionItemPosition::First}/>
+                            <AccordionItem title={ t("user-settings") } content={html!{ <setting_components::user_settings::UserSettings /> }} position={AccordionItemPosition::First}/>
                             // <AccordionItem title="Guest Settings" content={html!{ <setting_components::guest_settings::GuestSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Download Settings" content={html!{ <setting_components::download_settings::DownloadSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="User Self Service Settings" content={html!{ <setting_components::user_self_service::SelfServiceSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Email Settings" content={html!{ <setting_components::email_settings::EmailSettings /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Backup Server" content={html!{ <setting_components::backup_server::BackupServer /> }} position={AccordionItemPosition::Middle}/>
-                            <AccordionItem title="Restore Server" content={html!{ <setting_components::restore_server::RestoreServer /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("download-settings") } content={html!{ <setting_components::download_settings::DownloadSettings /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("self-service-settings") } content={html!{ <setting_components::user_self_service::SelfServiceSettings /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("email-settings") } content={html!{ <setting_components::email_settings::EmailSettings /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("backup-server") } content={html!{ <setting_components::backup_server::BackupServer /> }} position={AccordionItemPosition::Middle}/>
+                            <AccordionItem title={ t("restore-server") } content={html!{ <setting_components::restore_server::RestoreServer /> }} position={AccordionItemPosition::Middle}/>
                         </div>
                         }
                     } else {

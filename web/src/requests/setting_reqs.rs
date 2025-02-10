@@ -1634,3 +1634,23 @@ pub async fn fetch_import_progress(
         )))
     }
 }
+
+pub async fn update_user_language(
+    server_name: &str,
+    api_key: &str,
+    user_id: &i32,
+    language: &str,
+) -> Result<(), anyhow::Error> {
+    let url = format!("{}/api/data/update_language/{}", server_name, user_id);
+    let response = Request::put(&url)
+        .header("Api-Key", api_key)
+        .json(&serde_json::json!({ "language": language }))?
+        .send()
+        .await?;
+
+    if response.ok() {
+        Ok(())
+    } else {
+        Err(anyhow::Error::msg("Failed to update language preference"))
+    }
+}

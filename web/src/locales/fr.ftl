@@ -1,0 +1,12 @@
+settings = Paramètres
+user-settings = Paramètres utilisateur
+admin-settings = Paramètres administrateur
+theme = Changer le thème
+mfa-settings = Paramètres MFA
+export-backup = Exporter/Sauvegarder les podcasts
+import-podcasts = Importer les podcasts
+custom-feed = Ajouter un flux personnalisé
+connect-sync = Connecter la synchronisation Nextcloud/Gpodder Podcast
+api-keys = Clés API
+page-not-found = Page introuvable
+inconvenience-message = Désolé pour le dérangement. Vous pourriez manger un taco pour vous remonter le moral :)

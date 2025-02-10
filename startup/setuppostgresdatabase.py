@@ -122,7 +122,8 @@ try:
             Pod_Sync_Type VARCHAR(50) DEFAULT 'None',
             GpodderLoginName VARCHAR(255) DEFAULT '',
             GpodderToken VARCHAR(255) DEFAULT '',
-            EnableRSSFeeds BOOLEAN DEFAULT FALSE
+            EnableRSSFeeds BOOLEAN DEFAULT FALSE,
+            PreferredLanguage VARCHAR(10) DEFAULT 'en'
         )
     """)
 

@@ -1529,6 +1529,36 @@ async def api_get_user_details_id(user_id: int, cnx=Depends(get_database_connect
         return result
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+@app.put("/api/data/update_language/{user_id}")
+async def update_preferred_language(
+    user_id: int,
+    language: str,
+    cnx=Depends(get_database_connection),
+    api_key: str = Depends(get_api_key_from_header)
+):
+    is_valid_key = database_functions.functions.verify_api_key(cnx, database_type, api_key)
+    if not is_valid_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Your API key is either invalid or does not have correct permission"
+        )
+    
+    elevated_access = await has_elevated_access(api_key, cnx)
+    if not elevated_access:
+        # Get user ID from API key
+        user_id_from_api_key = database_functions.functions.id_from_api_key(cnx, database_type, api_key)
+        if user_id != user_id_from_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to update these user details"
+            )
+    
+    success = database_functions.functions.update_user_language(cnx, database_type, user_id, language)
+    if success:
+        return {"message": "Language preference updated successfully"}
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")    
 
 
 @app.get("/api/data/get_theme/{user_id}")
@@ -3766,6 +3796,7 @@ class TimeZoneInfo(BaseModel):
     timezone: str
     hour_pref: int
     date_format: str
+    preferred_language: str
 
 
 # FastAPI endpoint
@@ -3789,7 +3820,7 @@ async def setup_timezone_info(data: TimeZoneInfo, cnx=Depends(get_database_conne
                                 detail="You are not authorized to access these user details")
 
     success = database_functions.functions.setup_timezone_info(database_type, cnx, data.user_id, data.timezone,
-                                                               data.hour_pref, data.date_format)
+                                                               data.hour_pref, data.date_format, data.preferred_language)
     if success:
         return {"success": success}
     else:

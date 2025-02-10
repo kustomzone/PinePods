@@ -104,13 +104,13 @@ pub async fn call_get_user_id(
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[allow(non_snake_case)]
 pub struct GetUserDetails {
-    // Add fields according to your API's JSON response
     pub UserID: i32,
     pub Fullname: Option<String>,
     pub Username: Option<String>,
     pub Email: Option<String>,
     pub Hashed_PW: Option<String>,
     pub Salt: Option<String>,
+    pub PreferredLanguage: Option<String>,
 }
 
 pub async fn call_get_user_details(
@@ -362,6 +362,7 @@ pub struct TimeZoneInfo {
     pub timezone: String,
     pub hour_pref: i32,
     pub date_format: String,
+    pub preferred_language: String,
 }
 
 #[derive(Deserialize, Debug)]

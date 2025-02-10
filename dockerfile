@@ -82,6 +82,8 @@ RUN echo "${PINEPODS_VERSION}" > /pinepods/current_version
 # Configure Nginx
 COPY startup/nginx.conf /etc/nginx/nginx.conf
 
+ENV DEFAULT_LANGUAGE=en
+
 # Start Nginx and keep it running
 # CMD ["nginx", "-g", "daemon off;"]
 

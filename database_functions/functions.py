@@ -2625,13 +2625,12 @@ def get_user_details(cnx, database_type, username):
 def get_user_details_id(cnx, database_type, user_id):
     cursor = cnx.cursor()
     if database_type == "postgresql":
-        query = 'SELECT * FROM "Users" WHERE UserID = %s'
+        query = 'SELECT UserID, Fullname, Username, Email, Hashed_PW, PreferredLanguage FROM "Users" WHERE UserID = %s'
     else:
-        query = "SELECT * FROM Users WHERE UserID = %s"
+        query = "SELECT UserID, Fullname, Username, Email, Hashed_PW, PreferredLanguage FROM Users WHERE UserID = %s"
     cursor.execute(query, (user_id,))
     result = cursor.fetchone()
     cursor.close()
-    # cnx.close()
 
     if result:
         if isinstance(result, dict):
@@ -2640,7 +2639,8 @@ def get_user_details_id(cnx, database_type, user_id):
                 'Fullname': result['fullname'],
                 'Username': result['username'],
                 'Email': result['email'],
-                'Hashed_PW': result['hashed_pw']
+                'Hashed_PW': result['hashed_pw'],
+                'PreferredLanguage': result['preferredlanguage']
             }
         elif isinstance(result, tuple):
             return {
@@ -2648,10 +2648,27 @@ def get_user_details_id(cnx, database_type, user_id):
                 'Fullname': result[1],
                 'Username': result[2],
                 'Email': result[3],
-                'Hashed_PW': result[4]
+                'Hashed_PW': result[4],
+                'PreferredLanguage': result[5]
             }
-    else:
-        return None
+    return None
+
+def update_user_language(cnx, database_type, user_id, language):
+    cursor = cnx.cursor()
+    try:
+        if database_type == "postgresql":
+            query = 'UPDATE "Users" SET PreferredLanguage = %s WHERE UserID = %s'
+        else:
+            query = "UPDATE Users SET PreferredLanguage = %s WHERE UserID = %s"
+        
+        cursor.execute(query, (language, user_id))
+        cnx.commit()
+        affected_rows = cursor.rowcount
+        cursor.close()
+        return affected_rows > 0
+    except Exception as e:
+        cursor.close()
+        return False
 
 
 def user_history(cnx, database_type, user_id):
@@ -6876,31 +6893,30 @@ def remove_episode_history(database_type, cnx, url, title, user_id):
 
 
 
-def setup_timezone_info(database_type, cnx, user_id, timezone, hour_pref, date_format):
+def setup_timezone_info(database_type, cnx, user_id, timezone, hour_pref, date_format, preferred_language):
     if database_type == "postgresql":
         cursor = cnx.cursor()
         query = (
-            'UPDATE "Users" SET Timezone = %s, TimeFormat = %s, DateFormat = %s, FirstLogin = %s WHERE UserID = %s'
+            'UPDATE "Users" SET Timezone = %s, TimeFormat = %s, DateFormat = %s, '
+            'FirstLogin = %s, PreferredLanguage = %s WHERE UserID = %s'
         )
     else:  # MySQL or MariaDB
         cursor = cnx.cursor(dictionary=True)
         query = (
-            "UPDATE Users SET Timezone = %s, TimeFormat = %s, DateFormat = %s, FirstLogin = %s WHERE UserID = %s"
+            "UPDATE Users SET Timezone = %s, TimeFormat = %s, DateFormat = %s, "
+            "FirstLogin = %s, PreferredLanguage = %s WHERE UserID = %s"
         )
-
     try:
         if database_type == "postgresql":
-            cursor.execute(query, (timezone, hour_pref, date_format, True, user_id))
+            cursor.execute(query, (timezone, hour_pref, date_format, True, preferred_language, user_id))
         else:
-            cursor.execute(query, (timezone, hour_pref, date_format, 1, user_id))
+            cursor.execute(query, (timezone, hour_pref, date_format, 1, preferred_language, user_id))
         cnx.commit()
         cursor.close()
-
         return True
     except Exception as e:
         print("Error setting up time info:", e)
         return False
-
 
 
 def get_time_info(database_type, cnx, user_id):
