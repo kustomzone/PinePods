@@ -28,6 +28,95 @@ use yew::{function_component, html, Html};
 use yew_router::history::{BrowserHistory, History};
 use yewdux::prelude::*;
 
+// Add these functions to your download_tauri.rs or create a new module for media functionality
+
+pub async fn register_media_session(
+    title: String,
+    artist: String,
+    artwork_url: String,
+    duration: f64,
+) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok(()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create arguments object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("title"),
+        &JsValue::from_str(&title),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("artist"),
+        &JsValue::from_str(&artist),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("artworkUrl"),
+        &JsValue::from_str(&artwork_url),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("duration"),
+        &JsValue::from_f64(duration),
+    )?;
+
+    // Make the call - IMPORTANT: Use the plugin:media-session|register_media_session format
+    let command = JsValue::from_str("plugin:mobile-app-media|register_media_session");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    Ok(())
+}
+
+pub async fn update_playback_state(is_playing: bool, position: f64) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok(()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create arguments object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("isPlaying"),
+        &JsValue::from_bool(is_playing),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("position"),
+        &JsValue::from_f64(position),
+    )?;
+
+    // Make the call - IMPORTANT: Use the plugin:media-session|update_playback_state format
+    let command = JsValue::from_str("plugin:mobile-app-media|update_playback_state");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    Ok(())
+}
+
 fn group_episodes_by_podcast(episodes: Vec<EpisodeDownload>) -> HashMap<i32, Vec<EpisodeDownload>> {
     let mut grouped: HashMap<i32, Vec<EpisodeDownload>> = HashMap::new();
     for episode in episodes {

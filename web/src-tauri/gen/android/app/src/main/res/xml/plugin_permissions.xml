@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+  <plugin name="media-session">
+    <permission>register_media_session</permission>
+    <permission>update_playback_state</permission>
+  </plugin>
+</permissions>

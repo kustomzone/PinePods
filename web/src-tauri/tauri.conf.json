@@ -5,6 +5,9 @@
     "devUrl": "http://localhost:8080",
     "frontendDist": "../dist"
   },
+  "plugins": {
+    "mobile-app-media": null
+  },
   "identifier": "com.gooseberrydevelopment.pinepods",
   "productName": "Pinepods",
   "version": "1.2.4",

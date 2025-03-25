@@ -1,6 +1,8 @@
 use crate::components::context::{AppState, UIState};
 #[cfg(not(feature = "server_build"))]
-use crate::components::downloads_tauri::start_local_file_server;
+use crate::components::downloads_tauri::{
+    register_media_session, start_local_file_server, update_playback_state,
+};
 use crate::components::gen_components::{EpisodeModal, FallbackImage};
 use crate::components::gen_funcs::format_time_rm_hour;
 #[cfg(not(feature = "server_build"))]
@@ -793,6 +795,58 @@ pub fn audio_player(props: &AudioPlayerProps) -> Html {
 
         use_effect_with(audio_state.clone(), move |_| {
             if let Some(window) = web_sys::window() {
+                // Conditional compilation for Tauri functionality
+                #[cfg(not(feature = "server_build"))]
+                {
+                    // Check if running in Tauri
+                    let running_in_tauri =
+                        js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))
+                            .unwrap_or(false);
+
+                    // If running in Tauri, try to use the native media session API
+                    if running_in_tauri && audio_state.currently_playing.is_some() {
+                        // Use Tauri's native media session API if available
+                        if let Some(audio_props) = &audio_state.currently_playing {
+                            let artist = "Podcast".to_string(); // Default artist name
+
+                            let is_playing = audio_state_clone.audio_playing.unwrap_or(false);
+                            let current_time =
+                                if let Some(audio_element) = &audio_state_clone.audio_element {
+                                    audio_element.current_time()
+                                } else {
+                                    0.0
+                                };
+
+                            // Clone values for the async call
+                            let title = audio_props.title.clone();
+                            let artwork_url = audio_props.artwork_url.clone();
+                            let duration = audio_props.duration_sec;
+
+                            wasm_bindgen_futures::spawn_local(async move {
+                                // Register media session
+                                if let Err(e) =
+                                    register_media_session(title, artist, artwork_url, duration)
+                                        .await
+                                {
+                                    web_sys::console::log_1(
+                                        &format!("Error registering media session: {:?}", e).into(),
+                                    );
+                                }
+
+                                // Update playback state
+                                if let Err(e) =
+                                    update_playback_state(is_playing, current_time).await
+                                {
+                                    web_sys::console::log_1(
+                                        &format!("Error updating playback state: {:?}", e).into(),
+                                    );
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // This part works on all builds (web and Tauri)
                 let navigator: Navigator = window.navigator();
 
                 // Try to get media session

@@ -1,0 +1,25 @@
+{
+  "permissions": [
+    {
+      "identifier": "allow-register-media-session",
+      "description": "Enables the register_media_session command",
+      "commands": {
+        "allow": ["register_media_session"]
+      }
+    },
+    {
+      "identifier": "allow-update-playback-state",
+      "description": "Enables the update_playback_state command",
+      "commands": {
+        "allow": ["update_playback_state"]
+      }
+    }
+  ],
+  "default": {
+    "description": "Allows media session control",
+    "permissions": [
+      "allow-register-media-session",
+      "allow-update-playback-state"
+    ]
+  }
+}
