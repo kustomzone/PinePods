@@ -1,0 +1,7 @@
+[default]
+description = "Default permissions for the plugin"
+permissions = [
+    "allow-ping",
+    "allow-register-media-session",
+    "allow-update-playback-state",
+]

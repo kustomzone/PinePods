@@ -1,6 +1,8 @@
 use crate::components::context::{AppState, UIState};
 #[cfg(not(feature = "server_build"))]
-use crate::components::downloads_tauri::start_local_file_server;
+use crate::components::downloads_tauri::{
+    register_media_session, start_local_file_server, test_boolean, update_playback_state,
+};
 use crate::components::gen_components::{EpisodeModal, FallbackImage};
 use crate::components::gen_funcs::format_time_rm_hour;
 #[cfg(not(feature = "server_build"))]
@@ -786,166 +788,128 @@ pub fn audio_player(props: &AudioPlayerProps) -> Html {
         }
     });
 
+    // Android media session
     {
         let audio_state = audio_state.clone();
         let audio_dispatch = _audio_dispatch.clone();
-        let audio_state_clone = audio_state.clone();
 
-        use_effect_with(audio_state.clone(), move |_| {
-            if let Some(window) = web_sys::window() {
-                let navigator: Navigator = window.navigator();
+        use_effect_with(
+            (
+                audio_state.audio_playing,
+                audio_state.currently_playing.clone(),
+            ),
+            move |(is_playing, currently_playing)| {
+                web_sys::console::log_1(&"Android media session effect triggered".into());
 
-                // Try to get media session
-                if let Ok(media_session) =
-                    js_sys::Reflect::get(&navigator, &JsValue::from_str("mediaSession"))
-                {
-                    // Safely attempt to convert to MediaSession
-                    if let Ok(media_session) = media_session.dyn_into::<web_sys::MediaSession>() {
-                        // Update metadata if we have something playing
-                        if let Some(audio_props) = &audio_state.currently_playing {
-                            // Try to create new metadata
-                            if let Ok(metadata) = web_sys::MediaMetadata::new() {
-                                metadata.set_title(&audio_props.title);
+                if let Some(window) = web_sys::window() {
+                    // Only run this effect if in Tauri
+                    let in_tauri = js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))
+                        .unwrap_or(false);
 
-                                // Create artwork array
-                                let artwork_array = Array::new();
-                                let artwork_object = Object::new();
+                    web_sys::console::log_1(&format!("In Tauri: {}", in_tauri).into());
 
-                                // Set up artwork properties
-                                let _ = js_sys::Reflect::set(
-                                    &artwork_object,
-                                    &"src".into(),
-                                    &audio_props.artwork_url.clone().into(),
-                                );
-                                let _ = js_sys::Reflect::set(
-                                    &artwork_object,
-                                    &"sizes".into(),
-                                    &"512x512".into(),
-                                );
-                                let _ = js_sys::Reflect::set(
-                                    &artwork_object,
-                                    &"type".into(),
-                                    &"image/jpeg".into(),
-                                );
+                    if in_tauri && currently_playing.is_some() {
+                        let is_playing = is_playing.unwrap_or(false);
 
-                                artwork_array.push(&artwork_object);
-                                metadata.set_artwork(&artwork_array.into());
-                                media_session.set_metadata(Some(&metadata));
+                        web_sys::console::log_1(
+                            &format!("Current playing state: {}", is_playing).into(),
+                        );
 
-                                // Set playback state
-                                if audio_state_clone.audio_playing.unwrap() {
-                                    media_session
-                                        .set_playback_state(MediaSessionPlaybackState::Playing);
+                        if let Some(audio_props) = &currently_playing {
+                            web_sys::console::log_1(
+                                &"Audio props found, preparing to update media session".into(),
+                            );
+
+                            let artist = "Podcast".to_string();
+                            let title = audio_props.title.clone();
+                            let artwork_url = audio_props.artwork_url.clone();
+                            let duration = audio_props.duration_sec;
+                            let current_time =
+                                if let Some(audio_element) = &audio_state.audio_element {
+                                    let time = audio_element.current_time();
+                                    web_sys::console::log_1(
+                                        &format!("Current time: {:.2}s", time).into(),
+                                    );
+                                    time
                                 } else {
-                                    media_session
-                                        .set_playback_state(MediaSessionPlaybackState::Paused);
+                                    web_sys::console::log_1(&"No audio element found".into());
+                                    0.0
+                                };
+
+                            // Run this only when registering or when play state changes
+                            wasm_bindgen_futures::spawn_local(async move {
+                                // First register the media session
+                                web_sys::console::log_1(
+                                    &"About to call register_media_session".into(),
+                                );
+
+                                web_sys::console::log_1(&"Testing boolean parameter...".into());
+
+                                if let Err(e) = test_boolean(true).await {
+                                    web_sys::console::log_1(
+                                        &format!("Error in test_boolean: {:?}", e).into(),
+                                    );
+                                } else {
+                                    web_sys::console::log_1(
+                                        &"test_boolean completed successfully".into(),
+                                    );
                                 }
 
-                                // Update position state
-                                if let Some(audio_element) = &audio_state_clone.audio_element {
-                                    let duration = audio_props.duration_sec;
-                                    if !duration.is_nan() && duration > 0.0 {
-                                        let position_state = MediaPositionState::new();
-                                        position_state.set_duration(duration);
-                                        position_state
-                                            .set_playback_rate(audio_state_clone.playback_speed);
-                                        position_state.set_position(audio_element.current_time());
-                                        let _ = media_session
-                                            .set_position_state_with_state(&position_state);
-                                    }
+                                if let Err(e) =
+                                    register_media_session(title, artist, artwork_url, duration)
+                                        .await
+                                {
+                                    web_sys::console::log_1(
+                                        &format!("Error registering media session: {:?}", e).into(),
+                                    );
+                                } else {
+                                    web_sys::console::log_1(
+                                        &"register_media_session completed successfully".into(),
+                                    );
                                 }
-                            }
-                            // Inside your use_effect_with block, after setting up the initial position state:
-                            // Inside your media session setup use_effect:
-                            if let Some(audio_element) = &audio_state_clone.audio_element {
-                                let media_session_clone = media_session.clone();
-                                let audio_state_for_callback = audio_state_clone.clone();
-                                let audio_element_clone = audio_element.clone();
-                                let timeupdate_callback = Closure::wrap(Box::new(move || {
-                                    let duration = audio_element_clone.duration();
-                                    // Only update position state if we have a valid duration
-                                    if !duration.is_nan() && duration > 0.0 {
-                                        let position_state = MediaPositionState::new();
-                                        position_state.set_duration(duration);
-                                        position_state.set_playback_rate(
-                                            audio_state_for_callback.playback_speed,
-                                        );
-                                        position_state
-                                            .set_position(audio_element_clone.current_time());
-                                        let _ = media_session_clone
-                                            .set_position_state_with_state(&position_state);
-                                    }
-                                })
-                                    as Box<dyn FnMut()>);
 
-                                audio_element.set_ontimeupdate(Some(
-                                    timeupdate_callback.as_ref().unchecked_ref(),
-                                ));
-                                timeupdate_callback.forget();
-                            }
+                                // Then update the playback state
+                                web_sys::console::log_1(
+                                    &format!(
+                                        "About to call update_playback_state with is_playing={}",
+                                        is_playing
+                                    )
+                                    .into(),
+                                );
+
+                                if let Err(e) =
+                                    update_playback_state(is_playing, current_time).await
+                                {
+                                    web_sys::console::log_1(
+                                        &format!("Error updating playback state: {:?}", e).into(),
+                                    );
+                                } else {
+                                    web_sys::console::log_1(&format!("update_playback_state completed successfully with is_playing={}", is_playing).into());
+                                }
+                            });
+                        } else {
+                            web_sys::console::log_1(
+                                &"Currently playing is Some but audio_props is None".into(),
+                            );
                         }
-
-                        // Set up action handlers
-                        let audio_dispatch_play = audio_dispatch.clone();
-                        let play_pause_callback = Closure::wrap(Box::new(move || {
-                            audio_dispatch_play.reduce_mut(UIState::toggle_playback);
-                        })
-                            as Box<dyn FnMut()>);
-
-                        // Set play/pause handlers
-                        let _ = media_session.set_action_handler(
-                            web_sys::MediaSessionAction::Play,
-                            Some(play_pause_callback.as_ref().unchecked_ref()),
+                    } else {
+                        web_sys::console::log_1(
+                            &format!(
+                                "Skipping effect: in_tauri={}, currently_playing.is_some()={}",
+                                in_tauri,
+                                currently_playing.is_some()
+                            )
+                            .into(),
                         );
-                        let _ = media_session.set_action_handler(
-                            web_sys::MediaSessionAction::Pause,
-                            Some(play_pause_callback.as_ref().unchecked_ref()),
-                        );
-                        play_pause_callback.forget();
-
-                        // Set up seek backward handler
-                        let audio_state_back = audio_state.clone();
-                        let audio_dispatch_back = audio_dispatch.clone();
-                        let seek_backward_callback = Closure::wrap(Box::new(move || {
-                            if let Some(audio_element) = audio_state_back.audio_element.as_ref() {
-                                let new_time = audio_element.current_time() - 15.0;
-                                let _ = audio_element.set_current_time(new_time);
-                                audio_dispatch_back
-                                    .reduce_mut(|state| state.update_current_time(new_time));
-                            }
-                        })
-                            as Box<dyn FnMut()>);
-
-                        let _ = media_session.set_action_handler(
-                            web_sys::MediaSessionAction::Seekbackward,
-                            Some(seek_backward_callback.as_ref().unchecked_ref()),
-                        );
-                        seek_backward_callback.forget();
-
-                        // Set up seek forward handler
-                        let audio_state_fwd = audio_state.clone();
-                        let audio_dispatch_fwd = audio_dispatch.clone();
-                        let seek_forward_callback = Closure::wrap(Box::new(move || {
-                            if let Some(audio_element) = audio_state_fwd.audio_element.as_ref() {
-                                let new_time = audio_element.current_time() + 15.0;
-                                let _ = audio_element.set_current_time(new_time);
-                                audio_dispatch_fwd
-                                    .reduce_mut(|state| state.update_current_time(new_time));
-                            }
-                        })
-                            as Box<dyn FnMut()>);
-
-                        let _ = media_session.set_action_handler(
-                            web_sys::MediaSessionAction::Seekforward,
-                            Some(seek_forward_callback.as_ref().unchecked_ref()),
-                        );
-                        seek_forward_callback.forget();
                     }
+                } else {
+                    web_sys::console::log_1(&"Window not found".into());
                 }
-            }
 
-            || ()
-        });
+                // No cleanup needed
+                move || {}
+            },
+        );
     }
 
     // Toggle playback

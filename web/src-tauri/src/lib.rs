@@ -11,6 +11,9 @@ use std::io::Write;
 use std::path::PathBuf;
 use tauri::command;
 
+// Custom Plugins
+use tauri_plugin_mobileappmedia::init as init_mobile_app_media;
+
 // Define the structure for the file entries
 #[derive(Serialize, Deserialize)]
 struct FileEntry {
@@ -76,7 +79,7 @@ async fn download_file(url: String, filename: String) -> Result<(), String> {
             .max_redirects(20)
             .build()
             .new_agent();
-            
+
         let mut response = agent.get(&url).call().map_err(|e| e.to_string())?;
         let mut reader = response.body_mut().with_config().reader(); // Alternative approach
         let mut file = File::create(app_dir.join(&filename)).map_err(|e| e.to_string())?;
@@ -88,13 +91,13 @@ async fn download_file(url: String, filename: String) -> Result<(), String> {
 }
 
 #[derive(Debug, Deserialize, Default, Clone, PartialEq, Serialize)]
-#[serde(default)] 
+#[serde(default)]
 pub struct EpisodeInfo {
     pub episodetitle: String,
     pub podcastname: String,
     pub podcastid: i32,
     pub podcastindexid: Option<i64>,
-    pub feedurl: String,  // This field exists in the response
+    pub feedurl: String, // This field exists in the response
     pub episodepubdate: String,
     pub episodedescription: String,
     pub episodeartwork: String,
@@ -348,6 +351,7 @@ async fn start_file_server(filepath: String) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(init_mobile_app_media())
         .invoke_handler(tauri::generate_handler![
             list_dir,
             get_app_dir,

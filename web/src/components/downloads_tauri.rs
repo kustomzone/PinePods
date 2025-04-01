@@ -39,6 +39,164 @@ fn group_episodes_by_podcast(episodes: Vec<EpisodeDownload>) -> HashMap<i32, Vec
     grouped
 }
 
+pub async fn test_ping_mobile_plugin() -> Result<String, JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok("Tauri not available".to_string()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create the inner value object
+    let value_obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &value_obj,
+        &JsValue::from_str("value"),
+        &JsValue::from_str("Hello from Rust/Yew!"),
+    )?;
+
+    // Create the outer payload object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &JsValue::from_str("payload"), &value_obj)?;
+
+    // Make the call
+    let command = JsValue::from_str("plugin:mobileappmedia|ping");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    let result =
+        wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    // Convert result to String
+    match js_sys::Reflect::get(&result, &JsValue::from_str("value")) {
+        Ok(value) => Ok(value.as_string().unwrap_or_default()),
+        Err(_) => Ok("No value returned".to_string()),
+    }
+}
+
+pub async fn test_boolean(value: bool) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok(()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create arguments object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("value"),
+        &JsValue::from_bool(value),
+    )?;
+
+    // Make the call
+    let command = JsValue::from_str("plugin:mobileappmedia|testBoolean");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    Ok(())
+}
+
+pub async fn register_media_session(
+    title: String,
+    artist: String,
+    artwork_url: String,
+    duration: f64,
+) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok(()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create arguments object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("title"),
+        &JsValue::from_str(&title),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("artist"),
+        &JsValue::from_str(&artist),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("artworkUrl"),
+        &JsValue::from_str(&artwork_url),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("duration"),
+        &JsValue::from_f64(duration),
+    )?;
+
+    // Make the call - IMPORTANT: Use the plugin:media-session|register_media_session format
+    let command = JsValue::from_str("plugin:mobileappmedia|register_media_session");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    Ok(())
+}
+
+pub async fn update_playback_state(is_playing: bool, position: f64) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
+
+    // Check if __TAURI__ exists
+    let tauri = match js_sys::Reflect::has(&window, &JsValue::from_str("__TAURI__"))? {
+        true => js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?,
+        false => return Ok(()), // Return early if Tauri isn't available
+    };
+
+    let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+    let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+    let invoke_fn = invoke
+        .dyn_ref::<js_sys::Function>()
+        .ok_or_else(|| JsValue::from_str("invoke is not a function"))?;
+
+    // Create arguments object
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("playState"), // Changed from isPlaying
+        &JsValue::from_bool(is_playing),
+    )?;
+    js_sys::Reflect::set(
+        &args,
+        &JsValue::from_str("position"),
+        &JsValue::from_f64(position),
+    )?;
+
+    // Make the call - IMPORTANT: Use the plugin:media-session|update_playback_state format
+    let command = JsValue::from_str("plugin:mobileappmedia|update_playback_state");
+    let promise = invoke_fn.call2(&core, &command, &args)?;
+    wasm_bindgen_futures::JsFuture::from(promise.dyn_into::<js_sys::Promise>()?).await?;
+
+    Ok(())
+}
+
 pub async fn download_file(url: String, filename: String) -> Result<(), JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object found"))?;
 

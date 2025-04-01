@@ -10,10 +10,12 @@ Major Version:
 - [ ] Make sure youtube entirely works on homepage
 - [ ] Fix Virtual Line Spacing on Playlist Page
 - [ ] Update /home/collinp/Documents/github/PinePods/web/src-tauri/com.gooseberrydevelopment.pinepods.metainfo.xml file along with flatpak automation. This must be done on each release
-
-0.7.7
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+0.7.8
 
 - [] Updated youtube search results page to be similar to new pod results page
+- [] Android pulling upwards
+- []
 
 0.7.6
 - [x] Add ability to delete playlsits
@@ -29,9 +31,9 @@ Major Version:
 - [x] Clean warnings
 - [x] Check tauri
 - [x] Update packages
-- [] Automation implements correct SHA in the deb files
-- [] release
-- [] flatpak
+- [x] Automation implements correct SHA in the deb files
+- [x] release
+- [x] flatpak
 
 Pre 0.7.4
 

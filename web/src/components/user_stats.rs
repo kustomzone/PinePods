@@ -2,6 +2,7 @@ use super::app_drawer::App_drawer;
 use super::gen_components::Search_nav;
 use crate::components::audio::AudioPlayer;
 use crate::components::context::{AppState, UIState, UserStatsStore};
+use crate::components::downloads_tauri::test_ping_mobile_plugin;
 use crate::components::gen_funcs::{format_date, format_time_mins};
 use crate::requests::pod_req::call_get_pinepods_version;
 use crate::requests::stat_reqs;
@@ -82,11 +83,61 @@ pub fn user_stats() -> Html {
         .as_deref()
         .unwrap_or(&display_version_value);
 
+    let ping_result = use_state(|| None::<String>);
+    let is_pinging = use_state(|| false);
+
+    // Create a callback for the button
+    let on_ping_click = {
+        let ping_result = ping_result.clone();
+        let is_pinging = is_pinging.clone();
+
+        Callback::from(move |_| {
+            let ping_result = ping_result.clone();
+            let is_pinging = is_pinging.clone();
+
+            is_pinging.set(true);
+            wasm_bindgen_futures::spawn_local(async move {
+                match test_ping_mobile_plugin().await {
+                    Ok(result) => {
+                        ping_result.set(Some(result));
+                    }
+                    Err(e) => {
+                        let error_msg = format!("Error: {:?}", e);
+                        ping_result.set(Some(error_msg));
+                    }
+                }
+                is_pinging.set(false);
+            });
+        })
+    };
+
     html! {
         <>
         <div class="main-container">
             <Search_nav />
             <h1 class="text-2xl item_container-text font-bold text-center mb-6">{"User Statistics"}</h1>
+            // Add this test button before your stats display
+            <div class="item-container mx-auto p-6 shadow-md rounded mb-4">
+                <button
+                    onclick={on_ping_click}
+                    disabled={*is_pinging}
+                    class="large-card-button focus:ring-4 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none"
+                >
+                    {if *is_pinging { "Testing Plugin..." } else { "Test Plugin" }}
+                </button>
+
+                {
+                    if let Some(result) = ping_result.as_ref() {
+                        html! {
+                            <div class="mt-2 p-2 bg-gray-100 rounded">
+                                <p class="item_container-text">{"Plugin Response: "}{result}</p>
+                            </div>
+                        }
+                    } else {
+                        html! {}
+                    }
+                }
+            </div>
             <div class="item-container mx-auto p-6 shadow-md rounded">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 

@@ -1,9 +1,12 @@
 {
   "build": {
     "beforeBuildCommand": "trunk build",
-    "beforeDevCommand": "RUSTFLAGS='--cfg=web_sys_unstable_apis' trunk serve",
+    "beforeDevCommand": "RUSTFLAGS='--cfg=web_sys_unstable_apis' trunk serve >/dev/null 2>&1",
     "devUrl": "http://localhost:8080",
     "frontendDist": "../dist"
+  },
+  "plugins": {
+    "mobileappmedia": null
   },
   "identifier": "com.gooseberrydevelopment.pinepods",
   "productName": "Pinepods",
@@ -15,7 +18,18 @@
     },
     "withGlobalTauri": true,
     "security": {
-      "csp": null
+      "capabilities": [
+        {
+          "identifier": "default-capability",
+          "description": "Allow access to the mobile app media plugin",
+          "permissions": [
+            "mobileappmedia:default",
+            "mobileappmedia:allow-register-media-session",
+            "mobileappmedia:allow-update-playback-state"
+          ],
+          "windows": ["*"]
+        }
+      ]
     },
     "windows": [
       {
